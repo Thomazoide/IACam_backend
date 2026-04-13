@@ -8,6 +8,7 @@ import (
 	"github.com/Thomazoide/IACam_backend/internal/db"
 	"github.com/Thomazoide/IACam_backend/internal/models"
 	"github.com/Thomazoide/IACam_backend/internal/payloads"
+	"github.com/Thomazoide/IACam_backend/internal/services"
 	"github.com/go-chi/chi/v5"
 	"gorm.io/gorm"
 )
@@ -27,6 +28,7 @@ func CreateCamera(w http.ResponseWriter, r *http.Request) {
 	}
 	cam.Status = "active"
 	DB.Create(&cam)
+	go services.CreateWorker(cam.ID, cam.RTSP)
 	encoder.Encode(&payloads.ResponsePayload{
 		Message: "Cámara agregada",
 		Data:    cam,
@@ -77,7 +79,16 @@ func DeleteCamera(w http.ResponseWriter, r *http.Request) {
 	var DB *gorm.DB = db.GetInstance()
 	id := chi.URLParam(r, "id")
 	encoder := json.NewEncoder(w)
-	if err := DB.Delete(&models.Camera{}, id).Error; err != nil {
+	var cam *models.Camera
+	if err := DB.First(&cam, id).Error; err != nil {
+		encoder.Encode(&payloads.ResponsePayload{
+			Message: err.Error(),
+			Data:    nil,
+			Error:   true,
+		})
+	}
+	go services.RemoveWorker(cam.ID)
+	if err := DB.Delete(&cam).Error; err != nil {
 		encoder.Encode(&payloads.ResponsePayload{
 			Message: err.Error(),
 			Data:    nil,
