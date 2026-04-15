@@ -31,7 +31,14 @@ func CreateWorker(cameraID uint, rtsp string) error {
 				"API_URL=http://localhost:8080/events",
 			},
 		},
-		nil, nil, nil,
+		&container.HostConfig{
+			NetworkMode: "cam-net",
+			RestartPolicy: container.RestartPolicy{
+				Name: "always",
+			},
+		},
+		nil,
+		nil,
 		containerName,
 	)
 	if err != nil {
